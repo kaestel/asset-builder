@@ -435,9 +435,9 @@ function parseCSSFile($file, $fp) {
 									// print "\nnormalized_asset:" . $normalized_asset . "\n";
 
 									// Make asset url relative, to update CSS paths
-									// TODO: not covering all scenarios (img or assets)
 									$relative_asset = preg_replace("/^\/css\//", "", $normalized_asset);
 									$relative_asset = preg_replace("/^\/img\//", "../img/", $relative_asset);
+									// css has already been removed, so now just remove assets
 									$relative_asset = preg_replace("/^\/assets\//", "assets/", $relative_asset);
 									// print "\nrelative_asset:" . $relative_asset . "\n";
 
@@ -450,8 +450,18 @@ function parseCSSFile($file, $fp) {
 
 
 										$src = preg_replace("/(\.[wofetfsvg2]+)[\?#]+[\-_A-Za-z0-9]+$/", "$1", $doc_root.$normalized_asset);
-										$dest = preg_replace("/(\.[wofetfsvg2]+)[\?#]+[\-_A-Za-z0-9]+$/", "$1", $doc_root."/css/fonts/".basename($normalized_asset));
-
+										// Asset already in /css/fonts
+										if(preg_match("/^\/css\/fonts\//", $normalized_asset)) {
+											$dest = preg_replace("/(\.[wofetfsvg2]+)[\?#]+[\-_A-Za-z0-9]+$/", "$1", $doc_root.$normalized_asset);
+										}
+										// if path contains /css/fonts (use partial path)
+										else if(preg_match("/\/css\/fonts\//", $normalized_asset)) {
+											$dest = preg_replace("/(\.[wofetfsvg2]+)[\?#]+[\-_A-Za-z0-9]+$/", "$1", $doc_root.preg_replace("/[a-zA-Z0-9\-_.\/]+(\/css\/fonts\/)+/", "$1", $normalized_asset));
+										}
+										// Asset needs to be relocated
+										else {
+											$dest = preg_replace("/(\.[wofetfsvg2]+)[\?#]+[\-_A-Za-z0-9]+$/", "$1", $doc_root."/css/fonts/".basename($normalized_asset));
+										}
 										// print "src:" . $src . " -> dest " . $dest ."\n";
 
 										// move fonts 
@@ -472,7 +482,18 @@ function parseCSSFile($file, $fp) {
 									else if(preg_match("/\.(jpg|gif|png|svg)$/", $normalized_asset)) {
 
 										$src = $doc_root.$normalized_asset;
-										$dest = $doc_root."/img/".basename($normalized_asset);
+										// Asset already in /img
+										if(preg_match("/^\/img\//", $normalized_asset)) {
+											$dest = $doc_root.$normalized_asset;
+										}
+										// if path contains /img/ (use partial path)
+										else if(preg_match("/\/img\//", $normalized_asset)) {
+											$dest = $doc_root.preg_replace("/[a-zA-Z0-9\-_.\/]+(\/img\/)+/", "$1", $normalized_asset);
+										}
+										// Asset needs to be relocated
+										else {
+											$dest = $doc_root."/img/".basename($normalized_asset);
+										}
 
 										// print "src:" . $src . " -> dest " . $dest ."\n";
 
@@ -496,8 +517,18 @@ function parseCSSFile($file, $fp) {
 
 
 										$src = $doc_root.$normalized_asset;
-										$dest = $doc_root."/css/assets/".basename($normalized_asset);
-
+										// Asset already in /css/assets
+										if(preg_match("/^\/css\/assets\//", $normalized_asset)) {
+											$dest = $doc_root.$normalized_asset;
+										}
+										// if path contains /css/assets/ (use partial path)
+										else if(preg_match("/\/css\/assets\//", $normalized_asset)) {
+											$dest = $doc_root.preg_replace("/[a-zA-Z0-9\-_.\/]+(\/css\/assets\/)+/", "$1", $normalized_asset);
+										}
+										// Asset needs to be relocated
+										else {
+											$dest = $doc_root."/css/assets/".basename($normalized_asset);
+										}
 										// print "src:" . $src . " -> dest " . $dest ."\n";
 
 										// move images if they are not in default location (/img)
