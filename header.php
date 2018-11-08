@@ -17,7 +17,8 @@
 		.paths h2.bad {background-color: #df0000; color: white;}
 		.includes h2.good {background-color: #26962d; color: white;}
 		.includes h2.bad {background-color: #df0000; color: white;}
-		.includes .file .file h2 {font-size: 14px; background: #666666;}
+		.includes .file .file h2 {font-size: 13px; background: #666666;}
+		.includes .file .file h2.bad {background: #df0000;}
 		.includes {border: 2px solid #26962d; padding: 2px 2px 0; border-radius: 2px; margin-bottom: 20px;}
 		.includes h2 {cursor: pointer; padding: 3px 7px; margin: 0 0 2px; border-radius: 2px;}
 		.good {color: green;}
@@ -28,6 +29,7 @@
 		.includes .file .file .notminified {padding-left: 20px;}
 		.file {color: black; font-weight: bold;}
 		.file div {display: none;}
+		.file div.bad {display: block;}
 		.open > div {display: block;}
 	</style>
 </head>

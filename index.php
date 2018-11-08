@@ -1,6 +1,6 @@
 <?php
 // Asset builder for parentNode webstack
-// 2013-2015 Martin Kaestel Nielsen, parentnode.dk under MIT-License
+// 2013-2018 Martin Kaestel Nielsen, parentnode.dk under MIT-License
 // https://parentnode.dk
 
 
@@ -19,10 +19,35 @@ include("header.php");
 
 
 
+
+
+$variant = "";
+$js_input_path = false;
+$js_output_path = false;
+$css_input_path = false;
+$css_output_path = false;
+
+
+// Building variant?
+if(isset($_GET["path"]) && $_GET["path"]) {
+	// get params
+	$variant = $_GET["path"];
+
+}
+
 // Use document root starting point
-$doc_root = $_SERVER["DOCUMENT_ROOT"];
+$doc_root = $_SERVER["DOCUMENT_ROOT"].($variant ? "/$variant" : "");
+
+// Current domain - used to resolve references relying on apache alias'
+$domain = (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] ? "https" : "http") . "://" . $_SERVER["HTTP_HOST"];
+
+
+
 
 print '<div class="paths">';
+
+h2("<span>DOMAIN:</span> <span>$domain</span>", "good");
+
 
 // Does JS input path exist
 if(file_exists("$doc_root/js/lib")) {
@@ -68,7 +93,6 @@ print '<div class="includes js">';
 
 if($js_input_path && $js_output_path) {
 
-
 	// include license text
 	$js_license_file = $js_input_path."/license.txt";
 
@@ -76,7 +100,11 @@ if($js_input_path && $js_output_path) {
 	$js_handle = opendir("$js_input_path");
 	while(($js_file = readdir($js_handle)) !== false) {
 		if(preg_match("/^([a-zA-Z\-_]+)[_\-]include.js$/", $js_file, $match)) {
-			$js_file_include[] = $js_input_path."/".$match[1]."_include.js";
+
+			// use http requests to get input sources (to allow for apache alias')
+			$js_file_include[] = $domain . str_replace($_SERVER["DOCUMENT_ROOT"], "", $js_input_path)."/".$match[1]."_include.js";
+
+			// use file system paths for output (because we need to write to the file system in a fixed location)
 			$js_file_output[] = $js_output_path."/".$match[1].".js";
 		}
 	}
@@ -87,7 +115,7 @@ if($js_input_path && $js_output_path) {
 
 		// print $source."<br>";
 		// is segment include available
-		if(!file_exists($source)) {
+		if(!web_file_exists($source)) {
 
 			p($source . " -> " . $js_file_output[$index]);
 			p("No include file", "error");
@@ -104,13 +132,13 @@ if($js_input_path && $js_output_path) {
 				exit;
 			}
 
+			fwrite($js_fp, "/*\n");
 			// include license
 			if(file_exists($js_license_file)) {
-				fwrite($js_fp, "/*\n");
 				fwrite($js_fp, file_get_contents($js_license_file)."\n");
-				fwrite($js_fp, "js-merged @ ".date("Y-m-d H:i:s")."\n");
-				fwrite($js_fp, "*/\n");
 			}
+			fwrite($js_fp, "asset-builder @ ".date("Y-m-d H:i:s")."\n");
+			fwrite($js_fp, "*/\n");
 
 
 			// keep track of file size
@@ -120,9 +148,17 @@ if($js_input_path && $js_output_path) {
 			// write compiled js
 			parseJSFile($source, $js_fp);
 
+			// Close file pointer
+			fclose($js_fp);
 		}
 
 	}
+
+}
+// No js
+else {
+
+	h2("No JS to build", "bad");
 
 }
 
@@ -145,7 +181,11 @@ if($css_input_path && $css_output_path) {
 	$css_handle = opendir("$css_input_path");
 	while(($css_file = readdir($css_handle)) !== false) {
 		if(preg_match("/^([a-zA-Z\-_]+)[_\-]include.css$/", $css_file, $match)) {
-			$css_file_include[] = $css_input_path."/".$match[1]."_include.css";
+
+			// use http requests to get input sources (to allow for apache alias')
+			$css_file_include[] = $domain . str_replace($_SERVER["DOCUMENT_ROOT"], "", $css_input_path)."/".$match[1]."_include.css";
+
+			// use file system paths for output (because we need to write to the file system in a fixed location)
 			$css_file_output[] = $css_output_path."/".$match[1].".css";
 		}
 	}
@@ -155,7 +195,7 @@ if($css_input_path && $css_output_path) {
 
 		// print $source .":".realpath($source);
 		// is segment include available
-		if(!file_exists($source)) {
+		if(!web_file_exists($source)) {
 
 			p($source . " -> " . $css_file_output[$index]);
 			p("No include file", "error");
@@ -172,13 +212,13 @@ if($css_input_path && $css_output_path) {
 				exit;
 			}
 
+			fwrite($css_fp, "/*\n");
 			// include license
 			if(file_exists($css_license_file)) {
-				fwrite($css_fp, "/*\n");
 				fwrite($css_fp, file_get_contents($css_license_file)."\n");
-				fwrite($css_fp, "css-merged @ ".date("Y-m-d H:i:s")."\n");
-				fwrite($css_fp, "*/\n");
 			}
+			fwrite($css_fp, "asset-builder @ ".date("Y-m-d H:i:s")."\n");
+			fwrite($css_fp, "*/\n");
 
 
 			// keep track of file size
@@ -188,9 +228,18 @@ if($css_input_path && $css_output_path) {
 			// write compiled js
 			parseCSSFile($source, $css_fp);
 
+			// Close file pointer
+			fclose($css_fp);
+
 		}
 
 	}
+
+}
+// No css
+else {
+
+	h2("No CSS to build", "bad");
 
 }
 

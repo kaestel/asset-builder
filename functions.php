@@ -15,18 +15,63 @@ function div($text, $class = false) {
 	print '<div'.($class ? ' class="'.$class.'"' : '').'>'.$text.'</div>';
 }
 
+// Check if web url points to valid ressource
+function web_file_exists($url) {
+	
+	$context = stream_context_create(['http' => ['method' => 'HEAD']]);
+	$headers = get_headers($url, 0, $context);
+	return stripos($headers[0], "200 OK") ? true : false;
+
+}
+
+function makeDirRecursively($path) {
+	if(!file_exists($path)) {
+		$parts = explode("/", $path);
+		$verify_path = "";
+		for($i = 1; $i < count($parts); $i++) {
+			$verify_path .= "/".$parts[$i];
+			if(!file_exists($verify_path)) {
+				mkdir($verify_path);
+			}
+		}
+	}
+}
 
 
+function safeCopy($src, $dest, $domain) {
+	global $doc_root;
+	makeDirRecursively(dirname($dest));
+
+	// is file available via filesystem
+	if(file_exists($src)) {
+		copy($src, $dest);
+	}
+	// copy file from web
+	else {
+		file_put_contents($dest, file_get_contents(str_replace($doc_root, $domain, $src)));
+	}
+
+	
+}
 
 
 function parseJSFile($file, $fp) {
 	global $js_include_size;
-//	global $js_input_path;
+	global $domain;
+	global $doc_root;
 
 
-//	h2($file);
+	$file_content = @file_get_contents($file);
+	if($file_content === false) {
 
-	$file_size = strlen(file_get_contents($file));
+		print '<div class="file bad">'."\n";
+		print "\t".'<h2 class="bad">'.$file.": Missing file</h2>\n";
+		print '</div>';
+		return;
+
+	}
+
+	$file_size = strlen($file_content);
 	$js_include_size += $file_size ? $file_size : 0;
 
 	$minisize = 0;
@@ -150,16 +195,7 @@ function parseJSFile($file, $fp) {
 
 
 
-				// not comment and not empty line - nothing should be done
-				// else if(!$comment_switch && trim($work_line)) {
-				// 
-				// 	$work_line = $line;
-				// }
-
-
 				// Process line (unless comment switch is on)
-
-				// TODO: make sure it is a script tag
 
 				// check if line contains new include path
 				// if it does, then continue iteration in included file and skip work line
@@ -176,13 +212,14 @@ function parseJSFile($file, $fp) {
 					}
 					// local, absolute include
 					else if(strpos($matches[1], "/") === 0) {
-						$filepath = $_SERVER["DOCUMENT_ROOT"].$matches[1];
+//						$filepath = $_SERVER["DOCUMENT_ROOT"].$matches[1];
+						$filepath = $domain.$matches[1];
 					}
 					// relative include
 					// JS include can only be relative if they are always included from same level dir
 					// if relative path is found here, expect that is is relative to document root
 					else {
-						$filepath = $_SERVER["DOCUMENT_ROOT"]."/".$matches[1];
+						$filepath = $domain."/".$matches[1];
 					}
 
 					// parse new include file
@@ -219,7 +256,7 @@ function parseJSFile($file, $fp) {
 
 	// empty files
 	else {
-		print "\t".'<div class="minified"><span class="bad">Empty file</span></div>'."\n";
+		print "\t".'<h2 class="bad">'.$file.': Empty file</h2>'."\n";
 	}
 
 	//	print "<div class=\"size\">($js_include_size bytes) -> ($minisize bytes)</div>";
@@ -234,8 +271,22 @@ function parseJSFile($file, $fp) {
 
 function parseCSSFile($file, $fp) {
 	global $css_include_size;
+	global $domain;
+	global $doc_root;
+	global $css_output_path;
 
-	$file_size = strlen(file_get_contents($file));
+
+	$file_content = @file_get_contents($file);
+	if($file_content === false) {
+
+		print '<div class="file bad">'."\n";
+		print "\t".'<h2 class="bad">'.$file.": Missing file</h2>\n";
+		print '</div>';
+		return;
+
+	}
+
+	$file_size = strlen($file_content);
 	$css_include_size += $file_size ? $file_size : 0;
 	$minisize = 0;
 
@@ -300,17 +351,6 @@ function parseCSSFile($file, $fp) {
 				$com_s_pos = 0;
 				$com_e_pos = 0;
 
-				// check for // comment start - easy match, only ignore if : in front of //
-				// if(!$comment_switch && preg_match("/(^|[^:])\/\//", $work_line) && !substr_count($work_line, '"')%2) {
-				// 
-				// 	$work_line = substr($line, 0, strpos($line, "//"))."\n";
-				// }
-
-				// not comment and not empty line - nothing should be done
-				// else if(!$comment_switch && trim($work_line)) {
-				// 
-				// 	$work_line = $line;
-				// }
 
 
 				// check if line contains new include
@@ -326,12 +366,15 @@ function parseCSSFile($file, $fp) {
 					}
 					// local, absolute include
 					else if(strpos($matches[1], "/") === 0) {
-						$filepath = $_SERVER["DOCUMENT_ROOT"].$matches[1];
+						// $filepath = $_SERVER["DOCUMENT_ROOT"].$matches[1];
+						$filepath = $domain.$matches[1];
 					}
 
 					// relative include
 					// should be relative to current file
 					else {
+						// $filepath = dirname($file)."/".$matches[1];
+//						$filepath = $domain."/".$matches[1];
 						$filepath = dirname($file)."/".$matches[1];
 					}
 
@@ -350,12 +393,7 @@ function parseCSSFile($file, $fp) {
 					// Look for image references url(*)
 					// Look for font references url(*)
 					if(preg_match_all("/url\([\'\"]?([^\'\"\)]+)[\'\"]?\)/", $work_line, $assets)) {
-//						$asset_url = str_replace($_SERVER["DOCUMENT_ROOT"], "", $file);
 
-// print_r($matches);
-						// print "file:" . $file . "<br>\n";;
-						// print "DR:" . $_SERVER["DOCUMENT_ROOT"] . "<br>\n";;
-//						print "asset_folder:" . $asset_folder . "<br>\n";
 						if(count($assets) == 2) {
 							foreach($assets[1] as $asset) {
 								// print "match:" . $asset. "\n";
@@ -366,12 +404,17 @@ function parseCSSFile($file, $fp) {
 								// If it doesn't have http OR has current domain in it
 								if(!preg_match("/http[s]?:\/\/([^\/]+)/i", $asset, $domains) || strpos($domains[0], $_SERVER["HTTP_HOST"]) !== false) {
 
-									$asset_folder = explode("/", dirname(str_replace($_SERVER["DOCUMENT_ROOT"], "", $file)));
 									
+//									$asset_folder = explode("/", dirname(str_replace($_SERVER["DOCUMENT_ROOT"], "", $file)));
+									$asset_folder = explode("/", dirname(str_replace($domain, "", $file)));
+									// print_r($asset_folder);
+
 									// make sure we have clean url
 									$asset = preg_replace("/(http[s]?:\/\/)+[^\/]+/", "", $asset);
 									$work_line = preg_replace("/(http[s]?:\/\/)+[^\/]+/", "", $work_line);
+									// print "\nasset: $asset<br>\n";
 
+									// Create normalized absolute path for asset validation
 									// if path is not absolute
 									if(!preg_match("/^\//", $asset)) {
 										// Simplest url normalization
@@ -389,19 +432,38 @@ function parseCSSFile($file, $fp) {
 										$normalized_asset = $asset;
 									}
 
+									// print "\nnormalized_asset:" . $normalized_asset . "\n";
+
+									// Make asset url relative, to update CSS paths
+									// TODO: not covering all scenarios (img or assets)
+									$relative_asset = preg_replace("/^\/css\//", "", $normalized_asset);
+									$relative_asset = preg_replace("/^\/img\//", "../img/", $relative_asset);
+									$relative_asset = preg_replace("/^\/assets\//", "assets/", $relative_asset);
+									// print "\nrelative_asset:" . $relative_asset . "\n";
+
+
+
+
 									// font asset
 									// TODO: weak spot for svg's - aare they a graphic or a font (check for id - rarely used for graphic references)
 									if(preg_match("/\.(woff[2]?|eot|eot[\?]?#iefix|ttf|svg#[\-_A-Za-z0-9]+|otf)$/", $normalized_asset)) {
 
-										// Make sure include is absolute to safe font location
-										$work_line = str_replace($asset, $normalized_asset, $work_line);
 
-										// move fonts if they are not in default location (/css/fonts)
-										if(!preg_match("/^\/css\/fonts\//", $normalized_asset)) {
-											 // print "copy:" . preg_replace("/.svg[#\-_A-Za-z0-9]*$/", ".svg", $_SERVER["DOCUMENT_ROOT"].$normalized_asset) . " -> " . preg_replace("/.svg[#\-_A-Za-z0-9]*$/", ".svg", $_SERVER["DOCUMENT_ROOT"]."/css/fonts/".basename($normalized_asset))."\n";
-											copy(preg_replace("/.svg[#\-_A-Za-z0-9]*$/", ".svg", $_SERVER["DOCUMENT_ROOT"].$normalized_asset), preg_replace("/.svg[#\-_A-Za-z0-9]*$/", ".svg", $_SERVER["DOCUMENT_ROOT"]."/css/fonts/".basename($normalized_asset)));
+										$src = preg_replace("/(\.[wofetfsvg2]+)[\?#]+[\-_A-Za-z0-9]+$/", "$1", $doc_root.$normalized_asset);
+										$dest = preg_replace("/(\.[wofetfsvg2]+)[\?#]+[\-_A-Za-z0-9]+$/", "$1", $doc_root."/css/fonts/".basename($normalized_asset));
+
+										// print "src:" . $src . " -> dest " . $dest ."\n";
+
+										// move fonts 
+										// if they are not referenced in default relative location (fonts)
+										// of if they dont exist in the default relative location
+										if(!preg_match("/^fonts\//", $relative_asset) || !file_exists($dest)) {
+
+											safeCopy($src, $dest, $domain);
+
 											// update workline with new location
-	 										$work_line = str_replace($normalized_asset, "/css/fonts/".basename($normalized_asset), $work_line);
+	 										$relative_asset = "fonts/".basename($normalized_asset);
+
 										}
 										// print "work_line:" . $work_line . "\n";
 										// print "font\n<br>";
@@ -409,16 +471,21 @@ function parseCSSFile($file, $fp) {
 									// graphic asset
 									else if(preg_match("/\.(jpg|gif|png|svg)$/", $normalized_asset)) {
 
-										// Make sure include is absolute to safe font location
-										$work_line = str_replace($asset, $normalized_asset, $work_line);
+										$src = $doc_root.$normalized_asset;
+										$dest = $doc_root."/img/".basename($normalized_asset);
 
-										// move images if they are not in default location (/img)
-										if(!preg_match("/^\/img\//", $normalized_asset)) {
+										// print "src:" . $src . " -> dest " . $dest ."\n";
 
-											// print "copy:" . $_SERVER["DOCUMENT_ROOT"].$normalized_asset . " -> " . $_SERVER["DOCUMENT_ROOT"]."/img/".basename($normalized_asset)."\n";
-											copy($_SERVER["DOCUMENT_ROOT"].$normalized_asset, $_SERVER["DOCUMENT_ROOT"]."/img/".basename($normalized_asset));
+										// move images if they are not in default location (../img)
+										if(!preg_match("/^\.\.\/img\//", $relative_asset) || !file_exists($dest)) {
+
+											// print "copy:" . $src . " -> " . $dest ."\n";
+
+											safeCopy($src, $dest, $domain);
+
 											// update workline with new location
-	 										$work_line = str_replace($normalized_asset, "/img/".basename($normalized_asset), $work_line);
+	 										// $work_line = str_replace($normalized_asset, "../img/".basename($normalized_asset), $work_line);
+	 										$relative_asset = "../img/".basename($normalized_asset);
 
 										}
 										// print "work_line:" . $work_line . "\n";
@@ -427,42 +494,40 @@ function parseCSSFile($file, $fp) {
 									// unknown asset
 									else {
 
-										// Make sure include is absolute to safe font location
-										$work_line = str_replace($asset, $normalized_asset, $work_line);
+
+										$src = $doc_root.$normalized_asset;
+										$dest = $doc_root."/css/assets/".basename($normalized_asset);
+
+										// print "src:" . $src . " -> dest " . $dest ."\n";
 
 										// move images if they are not in default location (/img)
-										if(!preg_match("/^\/assets\//", $normalized_asset)) {
+										if(!preg_match("/^assets\//", $relative_asset) || !file_exists($dest)) {
 
-											// print "copy:" . $_SERVER["DOCUMENT_ROOT"].$normalized_asset . " -> " . $_SERVER["DOCUMENT_ROOT"]."/assets/".basename($normalized_asset)."\n";
-											copy($_SERVER["DOCUMENT_ROOT"].$normalized_asset, $_SERVER["DOCUMENT_ROOT"]."/assets/".basename($normalized_asset));
+
+											safeCopy($src, $dest, $domain);
+
 											// update workline with new location
-	 										$work_line = str_replace($normalized_asset, "/css/assets/".basename($normalized_asset), $work_line);
+	 										$relative_asset = "css/assets/".basename($normalized_asset);
+											
+	 										// $work_line = str_replace($normalized_asset, "/css/assets/".basename($normalized_asset), $work_line);
 
 										}
 
 										// print "work_line:" . $work_line . "\n";
 										// print "unknown asset\n<br>";
 									}
-
-
-									// get location of asset
-									// $url = "http://".$_SERVER["HTTP_HOST"].$normalized_asset;
-									// print "URL:" . $url . "<br>\n";
-//									print $match . " - " . dirname($file) . "<br>\n";
-
+									
+									// Make sure include is relative to safe location
+									$work_line = str_replace($asset, $relative_asset, $work_line);
+									
 
 								}
+
 							}
-							
 
 						}
 
-//						print_r($matches);
-
 					}
-
-
-
 
 
 					fwrite($fp, $work_line);
@@ -471,8 +536,8 @@ function parseCSSFile($file, $fp) {
 				}
 			}
 
+			// output result/stats of parsing
 
-			// output result of parsing
 			if(!$comment_switch && (trim($work_line) && trim($line) == trim($work_line))) {
 				print "\t".'<div class="notminified"><code>'.$linenumber.':'.htmlentities($line).'</code></div>';
 			}
@@ -485,7 +550,7 @@ function parseCSSFile($file, $fp) {
 	}
 	// empty files
 	else {
-		print "\t".'<div class="minified"><span class="bad">Empty file</span></div>'."\n";
+		print "\t".'<h2 class="bad">'.$file.': Empty file</h2>'."\n";
 	}
 
 	// 		$_ .= $source . " ($include_size bytes) -> " . $file_output[$index] . " (".filesize($file_output[$index])." bytes)<br />";
