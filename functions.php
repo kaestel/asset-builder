@@ -61,6 +61,20 @@ function parseJSFile($file, $fp) {
 	global $doc_root;
 
 
+	// normalize file path
+	$file_fragments_raw = explode("/", $file);
+	$file_fragments = [];
+	foreach($file_fragments_raw as $folder) {
+		if($folder == "..") {
+			array_pop($file_fragments);
+		}
+		else {
+			array_push($file_fragments, $folder);
+		}
+	}
+	$file = implode("/", $file_fragments);
+
+
 	$file_content = @file_get_contents($file);
 	if($file_content === false) {
 
@@ -276,6 +290,20 @@ function parseCSSFile($file, $fp) {
 	global $css_output_path;
 
 
+	// normalize file path
+	$file_fragments_raw = explode("/", $file);
+	$file_fragments = [];
+	foreach($file_fragments_raw as $folder) {
+		if($folder == "..") {
+			array_pop($file_fragments);
+		}
+		else {
+			array_push($file_fragments, $folder);
+		}
+	}
+	$file = implode("/", $file_fragments);
+
+
 	$file_content = @file_get_contents($file);
 	if($file_content === false) {
 
@@ -407,6 +435,7 @@ function parseCSSFile($file, $fp) {
 									
 //									$asset_folder = explode("/", dirname(str_replace($_SERVER["DOCUMENT_ROOT"], "", $file)));
 									$asset_folder = explode("/", dirname(str_replace($domain, "", $file)));
+									// print "\nfile: $file<br>\n";
 									// print_r($asset_folder);
 
 									// make sure we have clean url
@@ -453,14 +482,23 @@ function parseCSSFile($file, $fp) {
 										// Asset already in /css/fonts
 										if(preg_match("/^\/css\/fonts\//", $normalized_asset)) {
 											$dest = preg_replace("/(\.[wofetfsvg2]+)[\?#]+[\-_A-Za-z0-9]+$/", "$1", $doc_root.$normalized_asset);
+
+											// update relative path
+											$relative_asset = "fonts/".basename($normalized_asset);
 										}
 										// if path contains /css/fonts (use partial path)
 										else if(preg_match("/\/css\/fonts\//", $normalized_asset)) {
 											$dest = preg_replace("/(\.[wofetfsvg2]+)[\?#]+[\-_A-Za-z0-9]+$/", "$1", $doc_root.preg_replace("/[a-zA-Z0-9\-_.\/]+(\/css\/fonts\/)+/", "$1", $normalized_asset));
+
+											// update relative path
+											$relative_asset = "fonts/".preg_replace("/[a-zA-Z0-9\-_.\/]+(\/css\/fonts\/)+/", "", $normalized_asset);
 										}
 										// Asset needs to be relocated
 										else {
 											$dest = preg_replace("/(\.[wofetfsvg2]+)[\?#]+[\-_A-Za-z0-9]+$/", "$1", $doc_root."/css/fonts/".basename($normalized_asset));
+
+											// update relative path
+											$relative_asset = "fonts/".basename($normalized_asset);
 										}
 										// print "src:" . $src . " -> dest " . $dest ."\n";
 
@@ -471,8 +509,8 @@ function parseCSSFile($file, $fp) {
 
 											safeCopy($src, $dest, $domain);
 
-											// update workline with new location
-	 										$relative_asset = "fonts/".basename($normalized_asset);
+											// // update workline with new location
+											// 	 										$relative_asset = "fonts/".basename($normalized_asset);
 
 										}
 										// print "work_line:" . $work_line . "\n";
@@ -485,14 +523,23 @@ function parseCSSFile($file, $fp) {
 										// Asset already in /img
 										if(preg_match("/^\/img\//", $normalized_asset)) {
 											$dest = $doc_root.$normalized_asset;
+
+											// update relative path
+											$relative_asset = "../img/".basename($normalized_asset);
 										}
 										// if path contains /img/ (use partial path)
 										else if(preg_match("/\/img\//", $normalized_asset)) {
 											$dest = $doc_root.preg_replace("/[a-zA-Z0-9\-_.\/]+(\/img\/)+/", "$1", $normalized_asset);
+
+											// update relative path
+											$relative_asset = "../img/".preg_replace("/[a-zA-Z0-9\-_.\/]+(\/img\/)+/", "", $normalized_asset);
 										}
 										// Asset needs to be relocated
 										else {
 											$dest = $doc_root."/img/".basename($normalized_asset);
+
+											// update relative path
+											$relative_asset = "../img/".basename($normalized_asset);
 										}
 
 										// print "src:" . $src . " -> dest " . $dest ."\n";
@@ -505,8 +552,8 @@ function parseCSSFile($file, $fp) {
 											safeCopy($src, $dest, $domain);
 
 											// update workline with new location
-	 										// $work_line = str_replace($normalized_asset, "../img/".basename($normalized_asset), $work_line);
-	 										$relative_asset = "../img/".basename($normalized_asset);
+											// $work_line = str_replace($normalized_asset, "../img/".basename($normalized_asset), $work_line);
+											// $relative_asset = "../img/".basename($normalized_asset);
 
 										}
 										// print "work_line:" . $work_line . "\n";
@@ -520,14 +567,23 @@ function parseCSSFile($file, $fp) {
 										// Asset already in /css/assets
 										if(preg_match("/^\/css\/assets\//", $normalized_asset)) {
 											$dest = $doc_root.$normalized_asset;
+
+											// update relative path
+	 										$relative_asset = "css/assets/".basename($normalized_asset);
 										}
 										// if path contains /css/assets/ (use partial path)
 										else if(preg_match("/\/css\/assets\//", $normalized_asset)) {
 											$dest = $doc_root.preg_replace("/[a-zA-Z0-9\-_.\/]+(\/css\/assets\/)+/", "$1", $normalized_asset);
+
+											// update relative path
+	 										$relative_asset = "css/assets/".preg_replace("/[a-zA-Z0-9\-_.\/]+(\/css\/assets\/)+/", "", $normalized_asset);
 										}
 										// Asset needs to be relocated
 										else {
 											$dest = $doc_root."/css/assets/".basename($normalized_asset);
+
+											// update relative path
+	 										$relative_asset = "css/assets/".basename($normalized_asset);
 										}
 										// print "src:" . $src . " -> dest " . $dest ."\n";
 
@@ -537,8 +593,8 @@ function parseCSSFile($file, $fp) {
 
 											safeCopy($src, $dest, $domain);
 
-											// update workline with new location
-	 										$relative_asset = "css/assets/".basename($normalized_asset);
+											// // update relative path
+											// 	 										$relative_asset = "css/assets/".basename($normalized_asset);
 											
 	 										// $work_line = str_replace($normalized_asset, "/css/assets/".basename($normalized_asset), $work_line);
 
