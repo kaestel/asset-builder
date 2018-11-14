@@ -482,9 +482,6 @@ function parseCSSFile($file, $fp) {
 										// Asset already in /css/fonts
 										if(preg_match("/^\/css\/fonts\//", $normalized_asset)) {
 											$dest = preg_replace("/(\.[wofetfsvg2]+)[\?#]+[\-_A-Za-z0-9]+$/", "$1", $doc_root.$normalized_asset);
-
-											// update relative path
-											$relative_asset = "fonts/".basename($normalized_asset);
 										}
 										// if path contains /css/fonts (use partial path)
 										else if(preg_match("/\/css\/fonts\//", $normalized_asset)) {
@@ -523,9 +520,6 @@ function parseCSSFile($file, $fp) {
 										// Asset already in /img
 										if(preg_match("/^\/img\//", $normalized_asset)) {
 											$dest = $doc_root.$normalized_asset;
-
-											// update relative path
-											$relative_asset = "../img/".basename($normalized_asset);
 										}
 										// if path contains /img/ (use partial path)
 										else if(preg_match("/\/img\//", $normalized_asset)) {
@@ -567,9 +561,6 @@ function parseCSSFile($file, $fp) {
 										// Asset already in /css/assets
 										if(preg_match("/^\/css\/assets\//", $normalized_asset)) {
 											$dest = $doc_root.$normalized_asset;
-
-											// update relative path
-	 										$relative_asset = "css/assets/".basename($normalized_asset);
 										}
 										// if path contains /css/assets/ (use partial path)
 										else if(preg_match("/\/css\/assets\//", $normalized_asset)) {
