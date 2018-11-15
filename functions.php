@@ -382,7 +382,7 @@ function parseCSSFile($file, $fp) {
 
 
 				// check if line contains new include
-				if(!$comment_switch && preg_match("/@import url\(([a-zA-Z0-9\.\/_\:\-\=\?]+)\)/i", $work_line, $matches)) {
+				if(!$comment_switch && preg_match("/@import url\(['\"]?([a-zA-Z0-9\.\/_\:\-\=\?]+)['\"]?\)/i", $work_line, $matches)) {
 //					print "matched include:".$matches[1]."<br>";
 
 					$work_line = "";
