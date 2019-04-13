@@ -2,6 +2,10 @@
 // Asset builder for parentNode webstack
 // 2013-2018 Martin Kaestel Nielsen, parentnode.dk under MIT-License
 // https://parentnode.dk
+//
+// Add options:
+// - to use absolute or relative paths when building (default = relative)
+// - to move assets to /img|css|js/assets (default = ture)
 
 
 ini_set("auto_detect_line_endings", true);
@@ -27,16 +31,28 @@ $js_output_path = false;
 $css_input_path = false;
 $css_output_path = false;
 
+// Should output use relative or absolute paths – relative is default
+$css_output_relative_paths = true;
+
 
 // Building variant?
 if(isset($_GET["path"]) && $_GET["path"]) {
 	// get params
-	$variant = $_GET["path"];
+	$variant = "/".$_GET["path"];
 
 }
 
+// Output relative CSS paths
+if(isset($_GET["use_relative_css_paths"]) && $_GET["use_relative_css_paths"]) {
+	// get params
+	$css_output_relative_paths = $_GET["use_relative_css_paths"];
+
+}
+
+$escaped_variant = str_replace("/", "\/", $variant);
+
 // Use document root starting point
-$doc_root = $_SERVER["DOCUMENT_ROOT"].($variant ? "/$variant" : "");
+$doc_root = $_SERVER["DOCUMENT_ROOT"];
 
 // Current domain - used to resolve references relying on apache alias'
 $domain = (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] ? "https" : "http") . "://" . $_SERVER["HTTP_HOST"];
@@ -50,10 +66,10 @@ h2("<span>DOMAIN:</span> <span>$domain</span>", "good");
 
 
 // Does JS input path exist
-if(file_exists("$doc_root/js/lib")) {
+if(file_exists("$doc_root".($variant ? "$variant" : "")."/js/lib")) {
 
-	$js_input_path = "$doc_root/js/lib";
-	$js_output_path = "$doc_root/js";
+	$js_input_path = "$doc_root".($variant ? "$variant" : "")."/js/lib";
+	$js_output_path = "$doc_root".($variant ? "$variant" : "")."/js";
 
 	h2("<span>JS INPUT PATH:</span> <span>$js_input_path</span>", "good");
 	h2("<span>JS OUTPUT PATH:</span> <span>$js_output_path</span>", "good");
@@ -66,10 +82,10 @@ else {
 }
 
 // Does CSS input path exist
-if(file_exists("$doc_root/css/lib")) {
+if(file_exists("$doc_root".($variant ? "$variant" : "")."/css/lib")) {
 
-	$css_input_path = "$doc_root/css/lib";
-	$css_output_path = "$doc_root/css";
+	$css_input_path = "$doc_root".($variant ? "$variant" : "")."/css/lib";
+	$css_output_path = "$doc_root".($variant ? "$variant" : "")."/css";
 
 	h2("<span>CSS INPUT PATH:</span> <span>$css_input_path</span>", "good");
 	h2("<span>CSS OUTPUT PATH:</span> <span>$css_output_path</span>", "good");
@@ -158,7 +174,7 @@ if($js_input_path && $js_output_path) {
 // No js
 else {
 
-	h2("No JS to build", "bad");
+	h2("No JS to build", "warning");
 
 }
 
@@ -239,7 +255,7 @@ if($css_input_path && $css_output_path) {
 // No css
 else {
 
-	h2("No CSS to build", "bad");
+	h2("No CSS to build", "warning");
 
 }
 
