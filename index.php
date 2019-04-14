@@ -43,7 +43,7 @@ if(isset($_GET["path"]) && $_GET["path"]) {
 }
 
 // Output relative CSS paths
-if(isset($_GET["use_relative_css_paths"]) && $_GET["use_relative_css_paths"]) {
+if(isset($_GET["use_relative_css_paths"])) {
 	// get params
 	$css_output_relative_paths = $_GET["use_relative_css_paths"];
 

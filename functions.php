@@ -636,7 +636,6 @@ function parseCSSFile($file, $fp) {
 										// Convert to relative paths
 										if($css_output_relative_paths) {
 
-
 											// Make relative asset url, to update CSS paths
 
 											// Remove css fragment (linking happens from css folder)
@@ -651,9 +650,15 @@ function parseCSSFile($file, $fp) {
 
 											// h2("relative_asset:" . $relative_asset);
 
-											// Make sure include is relative to safe location
+											// Update the css reference
 											$work_line = str_replace($asset, $relative_asset, $work_line);
 
+										}
+										// Use absolute paths
+										else {
+
+											// Update the css reference to normalized absolute path
+											$work_line = str_replace($asset, $consolidated_asset, $work_line);
 										}
 
 									}
