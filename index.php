@@ -26,6 +26,7 @@ include("header.php");
 
 
 $variant = "";
+$path = "";
 $js_input_path = false;
 $js_output_path = false;
 $css_input_path = false;
@@ -38,7 +39,8 @@ $css_output_relative_paths = true;
 // Building variant?
 if(isset($_GET["path"]) && $_GET["path"]) {
 	// get params
-	$variant = "/".$_GET["path"];
+	$path = $_GET["path"];
+	$variant = "/".$path;
 
 }
 
@@ -57,7 +59,7 @@ $doc_root = $_SERVER["DOCUMENT_ROOT"];
 // Current domain - used to resolve references relying on apache alias'
 $domain = (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] ? "https" : "http") . "://" . $_SERVER["HTTP_HOST"];
 
-
+$build_time = date("Y-m-d H:i:s");
 
 
 print '<div class="paths">';
@@ -153,7 +155,7 @@ if($js_input_path && $js_output_path) {
 			if(file_exists($js_license_file)) {
 				fwrite($js_fp, file_get_contents($js_license_file)."\n");
 			}
-			fwrite($js_fp, "asset-builder @ ".date("Y-m-d H:i:s")."\n");
+			fwrite($js_fp, "asset-builder @ ".$build_time."\n");
 			fwrite($js_fp, "*/\n");
 
 
@@ -233,7 +235,7 @@ if($css_input_path && $css_output_path) {
 			if(file_exists($css_license_file)) {
 				fwrite($css_fp, file_get_contents($css_license_file)."\n");
 			}
-			fwrite($css_fp, "asset-builder @ ".date("Y-m-d H:i:s")."\n");
+			fwrite($css_fp, "asset-builder @ ".$build_time."\n");
 			fwrite($css_fp, "*/\n");
 
 
@@ -261,6 +263,57 @@ else {
 
 // End of css includes
 print '</div>';
+
+
+// CACHE BUSTING
+
+// Update cache busting (if possible)
+h1("Update cache busting");
+print '<div class="cachebuster">';
+
+$template_update = false;
+
+// Can we find templates folder
+if(file_exists($doc_root."/../templates")) {
+
+	$expected_header = $doc_root."/../templates/".($path ? $path : "www").".header.php";
+	// Can we find the header template matching current path
+	if(file_exists($expected_header)) {
+
+		$header_content = file($expected_header);
+		foreach($header_content as $i => $line) {
+			// preg_match("/seg_(?!_include)\.js(\?[^$]+)?/", $header_content, $matches);
+			// preg_match("/(\/seg_[^\.]+\.js)(\?[^\"]+)?/i", $line, $matches);
+			if(preg_match("/(\/seg_[^\.]+(?<!include)\.(js|css))(\?[^\"]+)?/i", $line, $matches)) {
+				$header_content[$i] = preg_replace("/(\/seg_[^\.]+(?<!include)\.(js|css))(\?[^\"]+)?/i", "$1?rev=".date("Ymd-His", strtotime($build_time)), $line);
+				$template_update = true;
+			}
+			
+		}
+		
+		// Update header template
+		file_put_contents($expected_header, implode("", $header_content));
+
+	}
+
+
+	// Don't attempt update, if things do look like expected
+
+}
+
+// Header template update
+if($template_update) {
+	h2("Cache busting updated", "good");
+}
+// No updates were made
+else {
+	h2("Cache busting not updated", "warning");
+}
+
+
+print '</div>';
+
+
 
 
 include("footer.php");
