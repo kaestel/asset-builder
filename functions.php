@@ -644,7 +644,7 @@ function parseCSSFile($file, $fp) {
 											}
 											// Make path relative to css folder
 											else {
-												$relative_asset = "..".preg_replace("/$escaped_variant/", "", $consolidated_asset);
+												$relative_asset = "..".preg_replace("/^$escaped_variant/", "", $consolidated_asset);
 											}
 
 
