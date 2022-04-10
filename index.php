@@ -273,41 +273,75 @@ print '<div class="cachebuster">';
 
 $template_update = false;
 
-// Can we find templates folder
-if(file_exists($doc_root."/../templates")) {
 
-	$expected_header = $doc_root."/../templates/".($path ? $path : "www").".header.php";
-	// Can we find the header template matching current path
-	if(file_exists($expected_header)) {
+// Special operation for Janitor UI build
+if($path === "janitor") {
 
-		$header_content = file($expected_header);
-		foreach($header_content as $i => $line) {
-			// preg_match("/seg_(?!_include)\.js(\?[^$]+)?/", $header_content, $matches);
-			// preg_match("/(\/seg_[^\.]+\.js)(\?[^\"]+)?/i", $line, $matches);
-			if(preg_match("/(\/seg_[^\.]+(?<!include)\.(js|css))(\?[^\"]+)?/i", $line, $matches)) {
-				$header_content[$i] = preg_replace("/(\/seg_[^\.]+(?<!include)\.(js|css))(\?[^\"]+)?/i", "$1?rev=".date("Ymd-His", strtotime($build_time)), $line);
-				$template_update = true;
-			}
-			
+	// TODO
+	// Update UI_BUILD in config.php
+
+	$config_path = $doc_root."/../config";
+
+	// Can we find templates folder
+	if(file_exists($config_path) && file_exists($config_path."/config.php")) {
+
+		$file_config = file_get_contents($config_path."/config.php");
+		if(preg_match("/(\n)[ \t]*define\(\"UI_BUILD\",[ ]*\".+\"\);/", $file_config)) {
+
+			$file_config = preg_replace("/(\n)[ \t]*define\(\"UI_BUILD\",[ ]*\".+\"\);/", "\ndefine(\"UI_BUILD\", \"".date("Ymd-His", strtotime($build_time))."\");", $file_config);
+
+			file_put_contents($config_path."/config.php", $file_config);
+
+			// Make sure file remains writeable even if it is edited manually
+			chmod($config_path."/config.php", 0777);
+
+			h2("UI BUILD updated in config.php", "good");
+
 		}
-		
-		// Update header template
-		file_put_contents($expected_header, implode("", $header_content));
+		else {
+			h2("UI BUILD NOT DEFINED IN config.php", "warning");
+		}
 
 	}
 
-
-	// Don't attempt update, if things do look like expected
-
 }
-
-// Header template update
-if($template_update) {
-	h2("Cache busting updated", "good");
-}
-// No updates were made
 else {
-	h2("Cache busting not updated", "warning");
+
+	$template_path = $doc_root."/../templates";
+
+	// Can we find templates folder
+	if(file_exists($template_path)) {
+
+		// find include sources
+		$template_handle = opendir("$template_path");
+		while(($file = readdir($template_handle)) !== false) {
+			if(preg_match("/^([a-zA-Z\-_]+).header.php$/", $file, $match) && !preg_match("/^janitor.header.php$/", $file, $match)) {
+
+				$header_content = file($template_path."/".$file);
+				foreach($header_content as $i => $line) {
+					// preg_match("/seg_(?!_include)\.js(\?[^$]+)?/", $header_content, $matches);
+					// preg_match("/(\/seg_[^\.]+\.js)(\?[^\"]+)?/i", $line, $matches);
+					if(preg_match("/(\/seg_[^\.]+(?<!include)\.(js|css))(\?[^\"]+)?/i", $line, $matches)) {
+						$header_content[$i] = preg_replace("/(\/seg_[^\.]+(?<!include)\.(js|css))(\?[^\"]+)?/i", "$1?rev=".date("Ymd-His", strtotime($build_time)), $line);
+						$template_update = true;
+					}
+			
+				}
+		
+				// Update header template
+				file_put_contents($template_path."/".$file, implode("", $header_content));
+
+				h2("Cache busting updated in $file", "good");
+			}
+		}
+
+		// No updates were made
+		if(!$template_update) {
+			h2("Cache busting not updated – you should run Janitor upgrade", "warning");
+		}
+
+	}
+
 }
 
 
