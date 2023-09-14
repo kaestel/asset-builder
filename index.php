@@ -315,7 +315,7 @@ else {
 		// find include sources
 		$template_handle = opendir("$template_path");
 		while(($file = readdir($template_handle)) !== false) {
-			if(preg_match("/^([a-zA-Z\-_]+).header.php$/", $file, $match) && !preg_match("/^janitor.header.php$/", $file, $match)) {
+			if(preg_match("/^([a-zA-Z\-_]+).(header|footer).php$/", $file, $match) && !preg_match("/^janitor.(header|footer).php$/", $file, $match)) {
 
 				$header_content = file($template_path."/".$file);
 				foreach($header_content as $i => $line) {
